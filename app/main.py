@@ -29,11 +29,11 @@ def check_method_route(client_socket):
 
     print(f"A {request_method} request received for endpoint {request_address}")
 
-    return request_method, request_address
+    return request_method, request_address, incoming_data_str
 
 
 # Handle route responses for task "Extract URL Path"
-def handle_route_response(request_address):
+def handle_route_response(request_address, incoming_data_str=None):
     response_proto = "HTTP/1.1"
     response_status = "200"
     response_status_text = "OK"
@@ -41,8 +41,14 @@ def handle_route_response(request_address):
     content_length = 0
     actual_content = ""
 
-    # Check if the requested route is other than / OR /echo/{str}
-    if request_address.startswith("/echo/"):
+    # Check the requested route for challenge conditions
+    if request_address == "/user-agent":
+        incoming_data_split = incoming_data_str.split("\r\n")
+        user_agent_str = [i for i in incoming_data_split if i.startswith("User-Agent")]
+        if user_agent_str:
+            actual_content = user_agent_str[0].replace("User-Agent:", "").strip()
+            content_length = len(actual_content)
+    elif request_address.startswith("/echo/"):
         actual_content = request_address.split("/")[2]
         content_length = len(actual_content)
     elif request_address != "/":
@@ -68,8 +74,8 @@ def main():
         print(f"The return address is {return_addr}")
 
         # Read the incoming request and generate response
-        _, request_address = check_method_route(client_socket)
-        defined_response = handle_route_response(request_address)
+        _, request_address, incoming_data_str = check_method_route(client_socket)
+        defined_response = handle_route_response(request_address, incoming_data_str)
         client_socket.sendall(defined_response)
         server_socket.close()
 
