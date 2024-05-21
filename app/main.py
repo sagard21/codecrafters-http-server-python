@@ -37,15 +37,19 @@ def handle_route_response(request_address):
     response_proto = "HTTP/1.1"
     response_status = "200"
     response_status_text = "OK"
+    content_type = "text/plain"
+    content_length = 0
+    actual_content = ""
 
-    # Check if the requested route is other than /
-    if request_address != "/":
+    # Check if the requested route is other than / OR /echo/{str}
+    if request_address.startswith("/echo/"):
+        actual_content = request_address.split("/")[2]
+        content_length = len(actual_content)
+    elif request_address != "/":
         response_status = "404"
         response_status_text = "Not Found"
 
-    response_message_str = (
-        f"{response_proto} {response_status} {response_status_text}\r\n\r\n"
-    )
+    response_message_str = f"{response_proto} {response_status} {response_status_text}\r\nContent-Type: {content_type}\r\nContent-Length: {content_length}\r\n\r\n{actual_content}"
 
     response_message_bytes = bytes(response_message_str, "utf-8")
 
