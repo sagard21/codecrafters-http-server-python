@@ -1,6 +1,7 @@
 # Uncomment this to pass the first stage
 import socket
 import sys
+import gzip
 from concurrent.futures import ThreadPoolExecutor
 from os.path import join
 
@@ -56,6 +57,8 @@ def handle_route_response(
             content_length = len(actual_content)
     elif request_address.startswith("/echo/"):
         actual_content = request_address.split("/")[2]
+        print(request_address)
+        print("Actual content - ", actual_content)
         content_length = len(actual_content)
         incoming_data_split = incoming_data_str.split("\r\n")
         content_enc_str = [
@@ -65,6 +68,8 @@ def handle_route_response(
             add_enc_type = content_enc_str[0].replace("Accept-Encoding:", "").strip()
             if "gzip" in add_enc_type:
                 content_enc = "gzip"
+                actual_content = gzip.compress(actual_content.encode())
+                content_length = len(actual_content)
     elif request_address.startswith("/files/"):
         dir_path = sys.argv[2]
         file_name = request_address[7:]
@@ -97,9 +102,12 @@ def handle_route_response(
 
     response_message_str = f"{response_proto} {response_status} {response_status_text}\r\nContent-Type: {content_type}\r\nContent-Length: {content_length}\r\n\r\n{actual_content}"
     if content_enc:
-        response_message_str = f"{response_proto} {response_status} {response_status_text}\r\nContent-Encoding: {content_enc}\r\nContent-Type: {content_type}\r\nContent-Length: {content_length}\r\n\r\n{actual_content}"
+        response_message_str = f"{response_proto} {response_status} {response_status_text}\r\nContent-Encoding: {content_enc}\r\nContent-Type: {content_type}\r\nContent-Length: {content_length}\r\n\r\n"
 
     response_message_bytes = bytes(response_message_str, "utf-8")
+    if content_enc:
+        response_message_bytes += actual_content
+    print(response_message_bytes)
 
     return response_message_bytes
 
