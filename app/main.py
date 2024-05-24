@@ -36,7 +36,9 @@ def check_method_route(client_socket):
 
 
 # Handle route responses for task "Extract URL Path"
-def handle_route_response(request_address, incoming_data_str=None):
+def handle_route_response(
+    request_address, incoming_data_str=None, request_method="GET"
+):
     response_proto = "HTTP/1.1"
     response_status = "200"
     response_status_text = "OK"
@@ -58,15 +60,28 @@ def handle_route_response(request_address, incoming_data_str=None):
         dir_path = sys.argv[2]
         file_name = request_address[7:]
         file_path = join(dir_path, file_name)
-        try:
-            with open(file_path, "r") as f:
-                actual_content = f.read()
-            content_type = "application/octet-stream"
-            content_length = len(actual_content)
-        except Exception as e:
-            print(f"Unable to find / open file - {e}")
-            response_status = "404"
-            response_status_text = "Not Found"
+        if request_method == "POST":
+            incoming_data_split = incoming_data_str.split("\r\n")
+            content_data = incoming_data_split[-1]
+            try:
+                with open(file_path, "w") as f:
+                    f.write(content_data)
+                response_status = "201"
+                response_status_text = "Created"
+            except Exception as e:
+                print(f"Unable to write to file - {e}")
+                response_status = "503"
+                response_status_text = "Server Error"
+        else:
+            try:
+                with open(file_path, "r") as f:
+                    actual_content = f.read()
+                content_type = "application/octet-stream"
+                content_length = len(actual_content)
+            except Exception as e:
+                print(f"Unable to find / open file - {e}")
+                response_status = "404"
+                response_status_text = "Not Found"
     elif request_address != "/":
         response_status = "404"
         response_status_text = "Not Found"
@@ -80,8 +95,12 @@ def handle_route_response(request_address, incoming_data_str=None):
 
 # Run both functions and send response
 def run_request_processor(client_socket):
-    _, request_address, incoming_data_str = check_method_route(client_socket)
-    defined_response = handle_route_response(request_address, incoming_data_str)
+    request_method, request_address, incoming_data_str = check_method_route(
+        client_socket
+    )
+    defined_response = handle_route_response(
+        request_address, incoming_data_str, request_method
+    )
     client_socket.sendall(defined_response)
 
     return defined_response
