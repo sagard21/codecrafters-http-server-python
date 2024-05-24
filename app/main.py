@@ -1,6 +1,8 @@
 # Uncomment this to pass the first stage
 import socket
+import sys
 from concurrent.futures import ThreadPoolExecutor
+from os.path import join
 
 
 # Function to receive all the data with buffer size of 1024
@@ -52,6 +54,19 @@ def handle_route_response(request_address, incoming_data_str=None):
     elif request_address.startswith("/echo/"):
         actual_content = request_address.split("/")[2]
         content_length = len(actual_content)
+    elif request_address.startswith("/files/"):
+        dir_path = sys.argv[2]
+        file_name = request_address[7:]
+        file_path = join(dir_path, file_name)
+        try:
+            with open(file_path, "r") as f:
+                actual_content = f.read()
+            content_type = "application/octet-stream"
+            content_length = len(actual_content)
+        except Exception as e:
+            print(f"Unable to find / open file - {e}")
+            response_status = "404"
+            response_status_text = "Not Found"
     elif request_address != "/":
         response_status = "404"
         response_status_text = "Not Found"
