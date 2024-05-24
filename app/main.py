@@ -63,7 +63,7 @@ def handle_route_response(
         ]
         if content_enc_str:
             add_enc_type = content_enc_str[0].replace("Accept-Encoding:", "").strip()
-            if add_enc_type == "gzip":
+            if "gzip" in add_enc_type:
                 content_enc = "gzip"
     elif request_address.startswith("/files/"):
         dir_path = sys.argv[2]
