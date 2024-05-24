@@ -1,5 +1,6 @@
 # Uncomment this to pass the first stage
 import socket
+from concurrent.futures import ThreadPoolExecutor
 
 
 # Function to receive all the data with buffer size of 1024
@@ -62,6 +63,15 @@ def handle_route_response(request_address, incoming_data_str=None):
     return response_message_bytes
 
 
+# Run both functions and send response
+def run_request_processor(client_socket):
+    _, request_address, incoming_data_str = check_method_route(client_socket)
+    defined_response = handle_route_response(request_address, incoming_data_str)
+    client_socket.sendall(defined_response)
+
+    return defined_response
+
+
 def main():
     # You can use print statements as follows for debugging, they'll be visible when running tests.
     print("Logs from your program will appear here!")
@@ -69,15 +79,15 @@ def main():
     # Uncomment this to pass the first stage
 
     server_socket = socket.create_server(("localhost", 4221), reuse_port=True)
-    while True:
-        client_socket, return_addr = server_socket.accept()  # wait for client
-        print(f"The return address is {return_addr}")
+    with ThreadPoolExecutor(max_workers=4) as executor:
+        while True:
+            client_socket, return_addr = server_socket.accept()  # wait for client
+            print(f"The return address is {return_addr}")
 
-        # Read the incoming request and generate response
-        _, request_address, incoming_data_str = check_method_route(client_socket)
-        defined_response = handle_route_response(request_address, incoming_data_str)
-        client_socket.sendall(defined_response)
-        server_socket.close()
+            # Read the incoming request and generate response
+            executor.submit(run_request_processor, client_socket)
+            # _ = run_request_processor(client_socket)
+    server_socket.close()
 
 
 if __name__ == "__main__":
