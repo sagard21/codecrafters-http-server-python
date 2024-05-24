@@ -45,6 +45,7 @@ def handle_route_response(
     content_type = "text/plain"
     content_length = 0
     actual_content = ""
+    content_enc = ""
 
     # Check the requested route for challenge conditions
     if request_address == "/user-agent":
@@ -56,6 +57,14 @@ def handle_route_response(
     elif request_address.startswith("/echo/"):
         actual_content = request_address.split("/")[2]
         content_length = len(actual_content)
+        incoming_data_split = incoming_data_str.split("\r\n")
+        content_enc_str = [
+            i for i in incoming_data_split if i.startswith("Accept-Encoding")
+        ]
+        if content_enc_str:
+            add_enc_type = content_enc_str[0].replace("Accept-Encoding:", "").strip()
+            if add_enc_type == "gzip":
+                content_enc = "gzip"
     elif request_address.startswith("/files/"):
         dir_path = sys.argv[2]
         file_name = request_address[7:]
@@ -87,6 +96,8 @@ def handle_route_response(
         response_status_text = "Not Found"
 
     response_message_str = f"{response_proto} {response_status} {response_status_text}\r\nContent-Type: {content_type}\r\nContent-Length: {content_length}\r\n\r\n{actual_content}"
+    if content_enc:
+        response_message_str = f"{response_proto} {response_status} {response_status_text}\r\nContent-Encoding: {content_enc}\r\nContent-Type: {content_type}\r\nContent-Length: {content_length}\r\n\r\n{actual_content}"
 
     response_message_bytes = bytes(response_message_str, "utf-8")
 
